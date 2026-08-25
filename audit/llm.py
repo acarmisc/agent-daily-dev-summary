@@ -10,9 +10,7 @@ from pathlib import Path
 from audit.git_source import collect_commits
 
 DEFAULT_MODEL = "kimi-k2.7-code"
-GATEWAY_URL = os.environ.get(
-    "LITELLM_BASE_URL", "https://llm-gw.ces.abstractstaging.it/v1/chat/completions"
-)
+GATEWAY_URL = os.environ.get("LITELLM_BASE_URL", "")
 ISSUE_RE = re.compile(r"\b([A-Z][A-Z0-9]{1,9}-\d{1,6})\b")
 REF_RE = re.compile(r"#(\d{1,6})\b")
 
