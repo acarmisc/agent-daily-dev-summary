@@ -11,7 +11,7 @@ data:
 # created out-of-band:
 #   kubectl -n kagent create secret generic commit-audit-secrets \
 #     --from-literal=GITHUB_TOKEN=... --from-literal=GITLAB_TOKEN=... \
-#     --from-literal=LITELLM_KEY=... --from-literal=SLACK_WEBHOOK_URL=...
+#     --from-literal=OPENAI_API_KEY=... --from-literal=SLACK_WEBHOOK_URL=...
 # (shared with the kagent MCPServer in k8s/kagent.yaml)
 apiVersion: batch/v1
 kind: CronJob

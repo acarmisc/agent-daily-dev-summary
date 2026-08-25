@@ -1,7 +1,7 @@
 # NOTE: create the secret manually, never via this file:
 #   kubectl -n kagent create secret generic commit-audit-secrets \
 #     --from-literal=GITHUB_TOKEN=... --from-literal=GITLAB_TOKEN=... \
-#     --from-literal=LITELLM_KEY=...
+#     --from-literal=OPENAI_API_KEY=...
 apiVersion: kagent.dev/v1alpha2
 kind: ModelConfig
 metadata:
@@ -12,7 +12,7 @@ spec:
   openAI:
     baseUrl: https://llm-gw.ces.abstractstaging.it/v1
   apiKeySecret: commit-audit-secrets
-  apiKeySecretKey: LITELLM_KEY
+  apiKeySecretKey: OPENAI_API_KEY
 ---
 apiVersion: kagent.dev/v1alpha1
 kind: MCPServer

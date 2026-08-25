@@ -10,15 +10,15 @@ from pathlib import Path
 from audit.git_source import collect_commits
 
 DEFAULT_MODEL = "kimi-k2.7-code"
-GATEWAY_URL = os.environ.get("LITELLM_BASE_URL", "")
+GATEWAY_URL = os.environ.get("OPENAI_BASE_URL", "")
 ISSUE_RE = re.compile(r"\b([A-Z][A-Z0-9]{1,9}-\d{1,6})\b")
 REF_RE = re.compile(r"#(\d{1,6})\b")
 
 
 def _call(model_id: str, system: str, user: str) -> str:
-    api_key = os.environ.get("LITELLM_KEY")
+    api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
-        raise RuntimeError("LITELLM_KEY env var is required")
+        raise RuntimeError("OPENAI_API_KEY env var is required")
     body = json.dumps({
         "model": model_id,
         "temperature": 0,
