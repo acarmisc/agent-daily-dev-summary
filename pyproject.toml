@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "commit-audit"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+agentcore = ["bedrock-agentcore"]
+
+[project.scripts]
+audit = "audit.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["audit*"]
+
+[tool.setuptools.package-data]
+audit = ["prompts/*.md"]

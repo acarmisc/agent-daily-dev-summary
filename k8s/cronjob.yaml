@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: commit-audit-secrets
+type: Opaque
+stringData:
+  GITHUB_TOKEN: "gho_REPLACE_ME"   # gh auth token, or fine-grained PAT (read-only contents)
+  LITELLM_KEY: "sk-REPLACE_ME"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: commit-audit
+spec:
+  schedule: "0 8 * * *" # daily 08:00 UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: audit
+              image: REGION-docker.pkg.dev/PROJECT/repo/commit-audit:0.1.0
+              imagePullPolicy: IfNotPresent
+              args: ["--repo", "https://github.com/org/REPLACE.git", "--period", "day"]
+              env:
+                - name: GITHUB_TOKEN
+                  valueFrom:
+                    secretKeyRef: { name: commit-audit-secrets, key: GITHUB_TOKEN }
+                - name: LITELLM_KEY
+                  valueFrom:
+                    secretKeyRef: { name: commit-audit-secrets, key: LITELLM_KEY }
+              resources:
+                requests: { cpu: 100m, memory: 128Mi }
+                limits: { memory: 512Mi }
