@@ -1,0 +1,50 @@
+# NOTE: create the secret manually, never via this file:
+#   kubectl -n kagent create secret generic commit-audit-secrets \
+#     --from-literal=GITHUB_TOKEN=... --from-literal=GITLAB_TOKEN=... \
+#     --from-literal=LITELLM_KEY=...
+apiVersion: kagent.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: commit-audit
+spec:
+  transportType: http
+  httpTransport:
+    targetPort: 8000
+    path: /mcp
+  deployment:
+    image: europe-west1-docker.pkg.dev/abs-digital-playground/agents/commit-audit:0.2.0
+    cmd: python
+    args: ["-m", "audit.mcp_server"]
+    port: 8000
+    env:
+      PORT: "8000"
+      AUDIT_SECRETS_DIR: "/etc/audit-secrets"
+    secretRefs:
+      - name: commit-audit-secrets
+    resources:
+      requests: { cpu: 100m, memory: 128Mi }
+      limits: { memory: 512Mi }
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: commit-auditor
+spec:
+  type: Declarative
+  description: Audits git commits over a period (day/week/month) and produces an honest markdown report with per-author contribution summary and requirement-origin tracing.
+  declarative:
+    modelConfig: default-model-config
+    systemMessage: |
+      You are a staff engineer auditing your own team's git repositories.
+      When asked to audit a repo, call the audit_repo tool with the https clone
+      URL and the period, then present the returned markdown report verbatim.
+      Do not soften findings, do not add commentary beyond the report unless
+      the user asks follow-up questions about it.
+    tools:
+      - type: McpServer
+        mcpServer:
+          apiGroup: kagent.dev
+          kind: MCPServer
+          name: commit-audit
+          toolNames:
+            - audit_repo
