@@ -1,0 +1,38 @@
+# Catalog entity for the commit-auditor agent, deployed on kagent
+# (namespace `kagent`, MCPServer `commit-audit` + Agent `commit-auditor` —
+# see k8s/kagent.yaml). Registered as a Backstage AI Agents Component via
+# the ai-agent.io/* annotations.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: commit-auditor
+  title: Commit Auditor — Daily Dev Summary
+  description: >-
+    Audits git commits over a period (day/week/month) and produces an
+    honest markdown report with a per-author contribution summary and
+    requirement-origin tracing. Also runs as a scheduled CronJob that
+    posts the daily summary to Slack for a fixed repo list.
+  tags:
+    - ai-agent
+    - kagent
+    - git
+    - code-review
+    - mcp
+  annotations:
+    backstage.io/source-location: url:https://github.com/acarmisc/agent-daily-dev-summary
+    ai-agent.io/runtime: kagent
+    ai-agent.io/runtime-handle: commit-auditor
+    ai-agent.io/namespace: kagent
+    ai-agent.io/capabilities: code-review:tools,reasoning:reasoning
+    ai-agent.io/avatar: https://api.dicebear.com/7.x/bottts/svg?seed=commit-auditor
+    ai-agent.io/hire-schema:
+      $text: ./hire.schema.json
+    ai-agent.io/prompt-template: 'Audit {repo} for the last {period}.'
+  links:
+    - url: https://github.com/acarmisc/agent-daily-dev-summary
+      title: Source code
+      icon: github
+spec:
+  type: ai-agent
+  lifecycle: experimental
+  owner: group:default/innovation

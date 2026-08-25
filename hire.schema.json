@@ -1,0 +1,17 @@
+[
+  {
+    "name": "repo",
+    "label": "Repository URL",
+    "type": "text",
+    "required": true,
+    "help": "HTTPS clone URL, e.g. https://github.com/acarmisc/backstage-plugin-ai-agents (github.com uses GITHUB_TOKEN, gitlab hosts use GITLAB_TOKEN)"
+  },
+  {
+    "name": "period",
+    "label": "Period",
+    "type": "select",
+    "required": true,
+    "options": ["day", "week", "month"],
+    "default": "day"
+  }
+]
