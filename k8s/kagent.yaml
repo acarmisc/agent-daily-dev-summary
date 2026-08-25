@@ -2,6 +2,18 @@
 #   kubectl -n kagent create secret generic commit-audit-secrets \
 #     --from-literal=GITHUB_TOKEN=... --from-literal=GITLAB_TOKEN=... \
 #     --from-literal=LITELLM_KEY=...
+apiVersion: kagent.dev/v1alpha2
+kind: ModelConfig
+metadata:
+  name: commit-audit-model
+spec:
+  provider: OpenAI
+  model: kimi-k2.7-code
+  openAI:
+    baseUrl: https://llm-gw.ces.abstractstaging.it/v1
+  apiKeySecret: commit-audit-secrets
+  apiKeySecretKey: LITELLM_KEY
+---
 apiVersion: kagent.dev/v1alpha1
 kind: MCPServer
 metadata:
@@ -33,7 +45,7 @@ spec:
   type: Declarative
   description: Audits git commits over a period (day/week/month) and produces an honest markdown report with per-author contribution summary and requirement-origin tracing.
   declarative:
-    modelConfig: default-model-config
+    modelConfig: commit-audit-model
     systemMessage: |
       You are a staff engineer auditing your own team's git repositories.
       When asked to audit a repo, call the audit_repo tool with the https clone

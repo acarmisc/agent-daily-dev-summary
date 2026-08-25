@@ -1,22 +1,34 @@
 """CLI entry point: python -m audit."""
 
 import argparse
+import json
+import os
 import sys
+import urllib.request
 from datetime import datetime, timedelta, timezone
 
 from audit.llm import DEFAULT_MODEL, run_audit
 
 
+def post_slack(webhook: str, text: str) -> None:
+    body = json.dumps({"text": f"```{text}```"}).encode()
+    req = urllib.request.Request(
+        webhook, data=body, headers={"Content-Type": "application/json"}
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        if resp.status != 200:
+            raise RuntimeError(f"slack post failed: {resp.status}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="audit")
-    parser.add_argument("--repo", required=True)
+    parser.add_argument("--repo", action="append", required=True)
     parser.add_argument("--period", choices=["day", "week", "month"], default="day")
     parser.add_argument("--since", type=datetime.fromisoformat)
     parser.add_argument("--until", type=datetime.fromisoformat)
     parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--branch")
     parser.add_argument("--lang", default="english")
-    parser.add_argument("--out")
     args = parser.parse_args()
 
     deltas = {"day": timedelta(days=1), "week": timedelta(days=7), "month": timedelta(days=30)}
@@ -31,12 +43,20 @@ def main() -> None:
         until = datetime.now(timezone.utc)
         since = until - delta
 
-    report = run_audit(args.repo, since, until, model_id=args.model, branch=args.branch, lang=args.lang)
-    if args.out:
-        with open(args.out, "w") as f:
-            f.write(report + "\n")
-    else:
-        sys.stdout.write(report + "\n")
+    webhook = os.environ.get("SLACK_WEBHOOK_URL")
+    failures = []
+    for repo in args.repo:
+        print(f"auditing {repo} ...", file=sys.stderr)
+        try:
+            report = run_audit(repo, since, until, model_id=args.model, branch=args.branch, lang=args.lang)
+            sys.stdout.write(report + "\n")
+            if webhook:
+                post_slack(webhook, f"*{repo}* ({since:%Y-%m-%d} → {until:%Y-%m-%d})\n{report}")
+        except Exception as e:
+            failures.append((repo, e))
+            print(f"FAILED {repo}: {e}", file=sys.stderr)
+    if failures:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

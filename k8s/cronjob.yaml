@@ -1,12 +1,18 @@
+# repos list (one clone URL per line)
 apiVersion: v1
-kind: Secret
+kind: ConfigMap
 metadata:
-  name: commit-audit-secrets
-type: Opaque
-stringData:
-  GITHUB_TOKEN: "gho_REPLACE_ME"   # gh auth token, or fine-grained PAT (read-only contents)
-  LITELLM_KEY: "sk-REPLACE_ME"
+  name: commit-audit-repos
+data:
+  repos: |
+    https://gitlab.az.abssrv.it/innovation/ces-ai-agents.git
+    https://github.com/acarmisc/backstage-plugin-ai-agents.git
 ---
+# created out-of-band:
+#   kubectl -n kagent create secret generic commit-audit-secrets \
+#     --from-literal=GITHUB_TOKEN=... --from-literal=GITLAB_TOKEN=... \
+#     --from-literal=LITELLM_KEY=... --from-literal=SLACK_WEBHOOK_URL=...
+# (shared with the kagent MCPServer in k8s/kagent.yaml)
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -24,16 +30,29 @@ spec:
           restartPolicy: Never
           containers:
             - name: audit
-              image: REGION-docker.pkg.dev/PROJECT/repo/commit-audit:0.1.0
+              image: europe-west1-docker.pkg.dev/abs-digital-playground/agents/commit-audit:0.3.0
               imagePullPolicy: IfNotPresent
-              args: ["--repo", "https://github.com/org/REPLACE.git", "--period", "day"]
-              env:
-                - name: GITHUB_TOKEN
-                  valueFrom:
-                    secretKeyRef: { name: commit-audit-secrets, key: GITHUB_TOKEN }
-                - name: LITELLM_KEY
-                  valueFrom:
-                    secretKeyRef: { name: commit-audit-secrets, key: LITELLM_KEY }
+              command: ["sh", "-c"]
+              args:
+                - |
+                  set -e
+                  CMD="audit --period day"
+                  while IFS= read -r r; do
+                    [ -n "$r" ] && CMD="$CMD --repo $r"
+                  done < /etc/audit/repos
+                  exec $CMD
+              envFrom:
+                - secretRef:
+                    name: commit-audit-secrets
+              volumeMounts:
+                - name: repos
+                  mountPath: /etc/audit/repos
+                  subPath: repos
+                  readOnly: true
               resources:
                 requests: { cpu: 100m, memory: 128Mi }
                 limits: { memory: 512Mi }
+          volumes:
+            - name: repos
+              configMap:
+                name: commit-audit-repos
