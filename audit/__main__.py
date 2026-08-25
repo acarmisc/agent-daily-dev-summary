@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import re
 import sys
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -10,8 +11,14 @@ from datetime import datetime, timedelta, timezone
 from audit.llm import DEFAULT_MODEL, run_audit
 
 
+def md_to_slack(md: str) -> str:
+    md = re.sub(r"^#{1,6}\s*(.+?)\s*$", r"*\1*", md, flags=re.M)
+    md = re.sub(r"\*\*(.+?)\*\*", r"*\1*", md)
+    return md.strip()
+
+
 def post_slack(webhook: str, text: str) -> None:
-    body = json.dumps({"text": f"```{text}```"}).encode()
+    body = json.dumps({"text": text}).encode()
     req = urllib.request.Request(
         webhook, data=body, headers={"Content-Type": "application/json"}
     )
@@ -51,7 +58,10 @@ def main() -> None:
             report = run_audit(repo, since, until, model_id=args.model, branch=args.branch, lang=args.lang)
             sys.stdout.write(report + "\n")
             if webhook:
-                post_slack(webhook, f"*{repo}* ({since:%Y-%m-%d} → {until:%Y-%m-%d})\n{report}")
+                post_slack(
+                    webhook,
+                    md_to_slack(f"# Audit — {repo}\n_{since:%Y-%m-%d} → {until:%Y-%m-%d}_\n\n{report}"),
+                )
         except Exception as e:
             failures.append((repo, e))
             print(f"FAILED {repo}: {e}", file=sys.stderr)
