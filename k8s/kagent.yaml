@@ -24,7 +24,7 @@ spec:
     targetPort: 8000
     path: /mcp
   deployment:
-    image: europe-west1-docker.pkg.dev/abs-digital-playground/agents/commit-audit:0.2.0
+    image: europe-west1-docker.pkg.dev/abs-digital-playground/agents/commit-audit:sha-ac99fbafc013
     cmd: python
     args: ["-m", "audit.mcp_server"]
     port: 8000
