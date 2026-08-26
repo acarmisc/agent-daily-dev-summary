@@ -29,13 +29,19 @@ spec:
           restartPolicy: Never
           containers:
             - name: audit
-              image: europe-west1-docker.pkg.dev/abs-digital-playground/agents/commit-audit:0.4.0
+              image: europe-west1-docker.pkg.dev/abs-digital-playground/agents/commit-audit:0.4.1
               imagePullPolicy: IfNotPresent
               command: ["sh", "-c"]
               args:
                 - |
                   set -e
-                  CMD="audit --period week --lang italian"
+                  # the default branch of hy-oo-app is quiet: audit whichever
+                  # branch was updated most recently (Bitbucket API)
+                  BRANCH=$(curl -sS -H "Authorization: Bearer $BITBUCKET_TOKEN" \
+                    "https://api.bitbucket.org/2.0/repositories/luxottica_rona/hy-oo-app/refs/branches?sort=-target.date&pagelen=1" \
+                    | python3 -c "import json,sys; print(json.load(sys.stdin)['values'][0]['name'])")
+                  echo "auditing branch: $BRANCH"
+                  CMD="audit --period week --lang italian --branch $BRANCH"
                   while IFS= read -r r; do
                     [ -n "$r" ] && CMD="$CMD --repo $r"
                   done < /etc/audit/repos
@@ -44,6 +50,8 @@ spec:
                 - secretRef:
                     name: commit-audit-secrets
               env:
+                - name: AUDIT_DEPTH
+                  value: "3000"
                 - name: GITLAB_URL
                   value: "https://gitlab.az.abssrv.it"
                 - name: KB_GITLAB_PROJECT
@@ -58,8 +66,8 @@ spec:
                   subPath: repos
                   readOnly: true
               resources:
-                requests: { cpu: 100m, memory: 128Mi }
-                limits: { memory: 512Mi }
+                requests: { cpu: 100m, memory: 256Mi }
+                limits: { memory: 1Gi }
           volumes:
             - name: repos
               configMap:

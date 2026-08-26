@@ -55,9 +55,11 @@ def main() -> None:
     for repo in args.repo:
         print(f"auditing {repo} ...", file=sys.stderr)
         try:
-            report = run_audit(repo, since, until, model_id=args.model, branch=args.branch, lang=args.lang)
+            depth = int(os.environ["AUDIT_DEPTH"]) if os.environ.get("AUDIT_DEPTH") else None
+            report = run_audit(repo, since, until, model_id=args.model, branch=args.branch, lang=args.lang, depth=depth)
             sys.stdout.write(report + "\n")
-            publish_to_knowledge(report, until)
+            if report.strip() != "No commits in period.":
+                publish_to_knowledge(report, until)
             if webhook:
                 post_slack(
                     webhook,

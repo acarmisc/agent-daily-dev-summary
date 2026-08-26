@@ -92,8 +92,9 @@ def run_audit(
     model_id: str = DEFAULT_MODEL,
     branch: str | None = None,
     lang: str = "english",
+    depth: int | None = None,
 ) -> str:
-    commits = collect_commits(repo, since, until, branch=branch)
+    commits = collect_commits(repo, since, until, branch=branch, depth=depth)
     if not commits:
         return "No commits in period."
     chunks = chunk_commits(commits)

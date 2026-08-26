@@ -46,6 +46,7 @@ def collect_commits(
     max_diff_bytes: int = 200_000,
     workdir: str | None = None,
     branch: str | None = None,
+    depth: int | None = None,
 ) -> list[dict]:
     resolved = resolve_clone_url(repo_url)
     tmp_ctx = tempfile.TemporaryDirectory() if workdir is None else None
@@ -53,6 +54,8 @@ def collect_commits(
     clone_cmd = ["git", "clone", "--no-tags"]
     if branch:
         clone_cmd += ["--branch", branch]
+    if depth:
+        clone_cmd += ["--depth", str(depth), "--single-branch"]
     clone_cmd += [resolved, repo_dir]
     try:
         try:
