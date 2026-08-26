@@ -11,19 +11,26 @@ def resolve_clone_url(url: str, token_env: str | None = None) -> str:
     scheme = urlsplit(url).scheme
     if scheme not in ("http", "https"):
         raise ValueError(f"not an http(s) URL: {url}")
+    host = (urlsplit(url).hostname or "").lower()
     env_name = token_env
     if env_name is None:
-        host = (urlsplit(url).hostname or "").lower()
         if host == "github.com":
             env_name = "GITHUB_TOKEN"
         elif "gitlab" in host:
             env_name = "GITLAB_TOKEN"
+        elif host == "bitbucket.org":
+            env_name = "BITBUCKET_TOKEN"
     token = os.environ.get(env_name) if env_name else None
     if token == "":
         raise ValueError(f"env var {env_name} is empty")
     if not token:
         return url
-    prefix = "x-access-token" if urlsplit(url).hostname == "github.com" else "oauth2"
+    if host == "github.com":
+        prefix = "x-access-token"
+    elif host == "bitbucket.org":
+        prefix = "x-bitbucket-api-token-auth"
+    else:
+        prefix = "oauth2"
     rest = url.split("://", 1)[1]
     return f"https://{prefix}:{token}@{rest}"
 

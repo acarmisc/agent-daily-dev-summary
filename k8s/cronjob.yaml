@@ -6,12 +6,19 @@ metadata:
 data:
   repos: |
     https://gitlab.az.abssrv.it/innovation/ces-ai-agents.git
+    # blocked on a Bitbucket-scoped credential (BITBUCKET_TOKEN secret key):
+    # https://bitbucket.org/luxottica_rona/hy-oo-app.git
     https://github.com/acarmisc/backstage-plugin-ai-agents.git
 ---
 # created out-of-band:
 #   kubectl -n kagent create secret generic commit-audit-secrets \
 #     --from-literal=GITHUB_TOKEN=... --from-literal=GITLAB_TOKEN=... \
-#     --from-literal=OPENAI_API_KEY=... --from-literal=SLACK_WEBHOOK_URL=...
+#     --from-literal=OPENAI_API_KEY=... --from-literal=SLACK_WEBHOOK_URL=... \
+#     --from-literal=LITELLM_KEY=... --from-literal=BITBUCKET_TOKEN=...
+#
+# KB publication (report -> knowledge repo -> CI -> S3/Bedrock), per-job env:
+#   KB_GITLAB_PROJECT / KB_PREFIX / KB_BRANCH / KB_GITLAB_URL
+#   (token read from GITLAB_TOKEN; BITBUCKET_TOKEN enables bitbucket.org clones)
 # (shared with the kagent MCPServer in k8s/kagent.yaml)
 apiVersion: batch/v1
 kind: CronJob

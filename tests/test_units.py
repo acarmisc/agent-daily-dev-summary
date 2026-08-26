@@ -81,3 +81,36 @@ class TestChunkCommits(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestResolveCloneUrlBitbucket(unittest.TestCase):
+    def test_bitbucket_token(self):
+        with mock.patch.dict(os.environ, {"BITBUCKET_TOKEN": "t3"}):
+            self.assertEqual(
+                resolve_clone_url("https://bitbucket.org/ws/repo.git"),
+                "https://x-bitbucket-api-token-auth:t3@bitbucket.org/ws/repo.git",
+            )
+
+    def test_bitbucket_no_token_passthrough(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(
+                resolve_clone_url("https://bitbucket.org/ws/repo.git"),
+                "https://bitbucket.org/ws/repo.git",
+            )
+
+
+class TestKnowledgePublish(unittest.TestCase):
+    def test_report_filename_iso_week(self):
+        from audit.kb import report_filename
+
+        assert report_filename(2026, 5) == "dev-log-2026-W05.md"
+
+    def test_commit_body_create_vs_append(self):
+        from audit.kb import build_commit_body
+
+        create = build_commit_body(None, "mds/dev-log.md", "R1", "msg")
+        self.assertEqual(create["actions"][0]["action"], "create")
+        append = build_commit_body("old", "mds/dev-log.md", "R2", "msg")
+        self.assertEqual(append["actions"][0]["action"], "update")
+        self.assertIn("old", append["actions"][0]["content"])
+        self.assertIn("---", append["actions"][0]["content"])

@@ -3,6 +3,8 @@
 import json
 import os
 import re
+import time
+import urllib.error
 import urllib.request
 from datetime import datetime
 from pathlib import Path
@@ -13,6 +15,9 @@ DEFAULT_MODEL = "kimi-k2.7-code"
 GATEWAY_URL = os.environ.get("OPENAI_BASE_URL", "")
 ISSUE_RE = re.compile(r"\b([A-Z][A-Z0-9]{1,9}-\d{1,6})\b")
 REF_RE = re.compile(r"#(\d{1,6})\b")
+
+_RETRYABLE = (429, 500, 502, 503, 504)
+_ATTEMPTS = 3
 
 
 def _call(model_id: str, system: str, user: str) -> str:
@@ -27,11 +32,20 @@ def _call(model_id: str, system: str, user: str) -> str:
             {"role": "user", "content": user},
         ],
     }).encode()
-    req = urllib.request.Request(GATEWAY_URL, data=body, headers={
-        "Authorization": f"Bearer {api_key}", "Content-Type": "application/json",
-    })
-    with urllib.request.urlopen(req, timeout=300) as resp:
-        return json.load(resp)["choices"][0]["message"]["content"]
+    last_err: Exception | None = None
+    for attempt in range(_ATTEMPTS):
+        req = urllib.request.Request(GATEWAY_URL, data=body, headers={
+            "Authorization": f"Bearer {api_key}", "Content-Type": "application/json",
+        })
+        try:
+            with urllib.request.urlopen(req, timeout=300) as resp:
+                return json.load(resp)["choices"][0]["message"]["content"]
+        except urllib.error.HTTPError as e:
+            if e.code not in _RETRYABLE:
+                raise
+            last_err = e
+        time.sleep(5 * (attempt + 1))
+    raise last_err
 
 
 def _system_prompt() -> str:

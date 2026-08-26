@@ -57,6 +57,7 @@ def main() -> None:
         try:
             report = run_audit(repo, since, until, model_id=args.model, branch=args.branch, lang=args.lang)
             sys.stdout.write(report + "\n")
+            publish_to_knowledge(report, until)
             if webhook:
                 post_slack(
                     webhook,
@@ -67,6 +68,23 @@ def main() -> None:
             print(f"FAILED {repo}: {e}", file=sys.stderr)
     if failures:
         raise SystemExit(1)
+
+
+def publish_to_knowledge(report: str, until: datetime) -> None:
+    """Commit the report under the knowledge repo prefix when KB_GITLAB_PROJECT
+    is set; the repo's own CI then syncs it to the agents' knowledge base."""
+    from audit.kb import publisher_from_env, report_filename
+
+    publisher, missing = publisher_from_env()
+    if publisher is None:
+        return
+    year, week, _ = until.isocalendar()
+    result = publisher.publish(
+        report_filename(year, week),
+        report,
+        f"knowledge: dev-log {until:%G-W%V}",
+    )
+    print(f"published {result['file_path']} ({result['action']})", file=sys.stderr)
 
 
 if __name__ == "__main__":
