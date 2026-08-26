@@ -1,0 +1,66 @@
+# Weekly knowledge dev-log for the OAK monorepo (hy-oo-app).
+# Requires in secret commit-audit-secrets: BITBUCKET_TOKEN (git+API scopes),
+# GITLAB_TOKEN with write_repository on the knowledge project.
+# The report lands under mds/oak/ and the repo's own CI syncs it to the
+# agents' Bedrock knowledge base.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: commit-audit-oak-repos
+data:
+  repos: |
+    https://bitbucket.org/luxottica_rona/hy-oo-app.git
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: commit-audit-oak
+spec:
+  schedule: "30 6 * * 1" # weekly, Monday 06:30 UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 3600 # big clone + LLM; do not let it hang forever
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: audit
+              image: europe-west1-docker.pkg.dev/abs-digital-playground/agents/commit-audit:0.4.0
+              imagePullPolicy: IfNotPresent
+              command: ["sh", "-c"]
+              args:
+                - |
+                  set -e
+                  CMD="audit --period week --lang italian"
+                  while IFS= read -r r; do
+                    [ -n "$r" ] && CMD="$CMD --repo $r"
+                  done < /etc/audit/repos
+                  exec $CMD
+              envFrom:
+                - secretRef:
+                    name: commit-audit-secrets
+              env:
+                - name: GITLAB_URL
+                  value: "https://gitlab.az.abssrv.it"
+                - name: KB_GITLAB_PROJECT
+                  value: "innovation/essilux/oo-knowledge"
+                - name: KB_PREFIX
+                  value: "mds/oak"
+                - name: KB_BRANCH
+                  value: "main"
+              volumeMounts:
+                - name: repos
+                  mountPath: /etc/audit/repos
+                  subPath: repos
+                  readOnly: true
+              resources:
+                requests: { cpu: 100m, memory: 128Mi }
+                limits: { memory: 512Mi }
+          volumes:
+            - name: repos
+              configMap:
+                name: commit-audit-oak-repos
