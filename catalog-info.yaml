@@ -35,4 +35,5 @@ metadata:
 spec:
   type: ai-agent
   lifecycle: experimental
+  system: abs-ces-ai-platform
   owner: group:default/innovation
